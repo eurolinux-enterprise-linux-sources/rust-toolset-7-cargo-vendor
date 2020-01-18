@@ -13,14 +13,14 @@
 %endif
 
 Name:           %{?scl_prefix}cargo-vendor
-Version:        0.1.13
+Version:        0.1.15
 Release:        1%{?dist}
 Summary:        Cargo subcommand to vendor crates.io dependencies
 License:        ASL 2.0 or MIT
 URL:            https://github.com/alexcrichton/cargo-vendor
 ExclusiveArch:  %{rust_arches}
 
-Source0:        %{url}/archive/%{version}/%{pkg_name}-%{version}.tar.gz
+Source0:        https://crates.io/api/v1/crates/%{pkg_name}/%{version}/download#/%{pkg_name}-%{version}.crate
 
 # Use vendored crate dependencies so we can build offline.
 # Created using cargo-vendor itself!
@@ -43,7 +43,7 @@ BuildRequires:  zlib-devel
 BuildRequires:  pkgconfig
 
 %if %with bundled_libgit2
-Provides:       bundled(libgit2) = 0.25.0
+Provides:       bundled(libgit2) = 0.27.0
 %else
 BuildRequires:  libgit2-devel >= 0.24
 %endif
@@ -85,6 +85,8 @@ EOF
 %global rustflags %{?rustflags} -Clink-arg=-Wl,-z,relro,-z,now
 %endif
 
+%{?enable_rusttoolset7}
+
 %build
 
 %if %without bundled_libgit2
@@ -96,9 +98,6 @@ export LIBGIT2_SYS_USE_PKG_CONFIG=1
 export CARGO_HOME="%{cargo_home}"
 export RUSTFLAGS="%{rustflags}"
 
-%{?scl:scl enable %scl - << \EOF}
-set -ex
-
 # cargo-vendor doesn't use a configure script, but we still want to use
 # CFLAGS in case of the odd C file in vendored dependencies.
 %{?__global_cflags:export CFLAGS="%{__global_cflags}"}
@@ -107,20 +106,13 @@ set -ex
 
 cargo build --release
 
-%{?scl:EOF}
-
 
 %install
 export CARGO_HOME="%{cargo_home}"
 export RUSTFLAGS="%{rustflags}"
 
-%{?scl:scl enable %scl - << \EOF}
-set -ex
-
 cargo install --root %{buildroot}%{_prefix}
 rm -f %{buildroot}%{_prefix}/.crates.toml
-
-%{?scl:EOF}
 
 
 #check
@@ -134,6 +126,9 @@ rm -f %{buildroot}%{_prefix}/.crates.toml
 
 
 %changelog
+* Fri May 18 2018 Josh Stone <jistone@redhat.com> - 0.1.15-1
+- Update to 0.1.15.
+
 * Wed Dec 13 2017 Josh Stone <jistone@redhat.com> - 0.1.13-1
 - Update to 0.1.13.
 
